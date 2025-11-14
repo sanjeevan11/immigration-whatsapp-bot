@@ -1058,24 +1058,27 @@ def ws(payload):
     except Exception as e:
         print(f"Error sending WhatsApp message: {e}")
 
-def send_text(to, body):
-    def send_action_buttons(to, case_id, intake_url, upload_url, folder_url):
-        payload = {
-          "messaging_product":"whatsapp",
-          "to": to,
-          "type":"interactive",
-          "interactive":{
+# Global send_action_buttons function (moved from inside send_text)
+def send_action_buttons(to, case_id, intake_url, upload_url, folder_url):
+    payload = {
+        "messaging_product":"whatsapp",
+        "to": to,
+        "type":"interactive",
+        "interactive":{
             "type":"button",
             "header":{"type":"text","text":"✅ Case registered"},
             "body":{"text": f"Case ID: *{case_id}*\nChoose an action:"},
             "action":{"buttons":[
-              {"type":"url","url": intake_url, "title":"📋 Intake form"},
-              {"type":"url","url": upload_url, "title":"📄 Upload docs"},
-              {"type":"url","url": folder_url, "title":"📁 Case folder"},
+                {"type":"url","url": intake_url, "title":"📝 Intake form"},
+                {"type":"url","url": upload_url, "title":"📄 Upload docs"},
+                {"type":"url","url": folder_url, "title":"📁 Case folder"},
             ]}
-          }
         }
-        ws(payload)
+    }
+    ws(payload)
+
+
+def send_text(to, body):
     ws({"messaging_product": "whatsapp", "to": to, "type": "text", "text": {"body": body}})
 
 def send_buttons(to, body, opts):
