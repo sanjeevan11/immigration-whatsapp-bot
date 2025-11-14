@@ -38,28 +38,36 @@ def webhook():
     """Handle incoming WhatsApp messages"""
     try:
         data = request.get_json()
+        print("Incoming payload:", data)
+
+        if not data:
+            return jsonify({'status': 'no_data'}), 200
         
         # Process messages
         if 'entry' in data:
             for entry in data['entry']:
                 if 'changes' in entry:
                     for change in entry['changes']:
-                        if 'value' in change and 'messages' in change['value']:
-                            messages = change['value']['messages']
-                            for message in messages:
-                                from_number = message.get('from')
-                                msg_body = message.get('text', {}).get('body', '')
-                                
-                                # Send response
+                        value = change.get('value', {})
+                        messages = value.get('messages', [])
+                        for message in messages:
+                            from_number = message.get('from')
+                            msg_body = message.get('text', {}).get('body', '')
+                            
+                            if from_number and msg_body:
                                 send_whatsapp_message(from_number, f"Received: {msg_body}")
         
         return jsonify({'status': 'ok'}), 200
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({'status': 'error'}), 500
+        print(f"Error in webhook handler: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 def send_whatsapp_message(to_number, message_text):
     """Send WhatsApp message via Cloud API"""
+    if not ACCESS_TOKEN or not WA_PHONE_ID:
+        print("Missing ACCESS_TOKEN or WA_PHONE_ID")
+        return None
+
     url = f"https://graph.facebook.com/v17.0/{WA_PHONE_ID}/messages"
     headers = {
         'Authorization': f'Bearer {ACCESS_TOKEN}',
@@ -72,7 +80,8 @@ def send_whatsapp_message(to_number, message_text):
     }
     
     try:
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        print("WA response:", response.status_code, response.text)
         return response.json()
     except Exception as e:
         print(f"Error sending message: {e}")
