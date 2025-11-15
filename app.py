@@ -8,35 +8,52 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 
 
-# Configuration (updated with your provided values)
-ACCESS_TOKEN = os.getenv('WA_ACCESS_TOKEN', "EACHWo8LZCYRwBP5s6kfto6U1yTV6dWVUHiOKlZCEOx0rkHZBPPBbPEf8Esypwq4nR5ZCxtodgMkVA0LyMdqHuJLCAFisTBY76ASiZAT2WZBRrDQGz2bAKlGv2QnGUobEsZBDB4NWOkDUSh5nwp0PpmXsFZCQZAM35wU7Xst3t5r0wmZCri7p5JdCB5KkVzZAyzzKcDUZCYDJD4aylOyYkAQNAGLubTsZCyDJuSQlQm3SGgCvIeA4G6lnXCq5WXUjUrcqL1gZDZD")  # Replace with your token
-PHONE_NUMBER_ID = os.getenv('WA_PHONE_ID', "579796315228068")  # Replace with your phone ID
-API_VER = "v18.0"  # Stable version
-WA_URL = f"https://graph.facebook.com/{API_VER}/{PHONE_NUMBER_ID}/messages"
-VERIFY_TOKEN = os.getenv('WA_VERIFY_TOKEN', "MY_UNIQUE_VERIFY_TOKEN_123")
+# =========================
+# Core WhatsApp / API config
+# =========================
 
-# *** ROUTE EVERYTHING TO THE NEW APPS SCRIPT ***
-APPSCRIPT_URL    = os.getenv('APPSCRIPT_URL', "https://script.google.com/macros/s/AKfycbz9DPnJ4lNZhFBWuExDiJN_H3y-XTZ50H-DCXSTOiP7d3HA0TIYbDrJ-_ZS-0na0viI/exec")
-
-OPENROUTER_KEY   = os.getenv('OPENROUTER_KEY', "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")
-OPENROUTER_MODEL = "qwen/qwen3-30b-a3b:free"
-OPENROUTER_API   = "https://openrouter.ai/api/v1/chat/completions"
-
-# NEW: Admin/Drive/Calendar settings
-ADMIN_EMAIL     = os.getenv("ADMIN_EMAIL", "solutions@nexabloom.io")
-# From your Drive folder link: https://drive.google.com/drive/folders/1qobSLoixuJILlkSP-nIo4qOHzVOLMpWv
-DRIVE_FOLDER_ID = os.getenv("DRIVE_FOLDER_ID", "1qobSLoixuJILlkSP-nIo4qOHzVOLMpWv")
-CALENDLY_URL    = os.getenv("CALENDLY_URL", "")     # optional
-CAL_DEFAULT_TZ  = os.getenv("CAL_TZ", "Europe/London")
-MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(12*1024*1024)))  # 12MB
+ACCESS_TOKEN    = os.getenv("WA_ACCESS_TOKEN")          # MUST be set in Render env
+PHONE_NUMBER_ID = os.getenv("WA_PHONE_ID")              # e.g. "579796315228068"
+API_VER         = "v18.0"
 GRAPH_BASE      = f"https://graph.facebook.com/{API_VER}"
+WA_URL          = f"{GRAPH_BASE}/{PHONE_NUMBER_ID}/messages"
+VERIFY_TOKEN    = os.getenv("WA_VERIFY_TOKEN")          # same as in Meta webhook config
 
-# SHEET target (from your link)
-SHEET_ID        = os.getenv("SHEET_ID", "105mrH6iAIPzUJ035iHymxIjS7FaEnPcPeb3hIdgBr-s")
-SHEET_TAB       = os.getenv("SHEET_TAB", "Cases")  # change if your tab name differs
+# Fail fast if something critical is missing
+if not ACCESS_TOKEN:
+    raise RuntimeError("WA_ACCESS_TOKEN is not set in environment")
+if not PHONE_NUMBER_ID:
+    raise RuntimeError("WA_PHONE_ID is not set in environment")
+if not VERIFY_TOKEN:
+    raise RuntimeError("WA_VERIFY_TOKEN is not set in environment")
 
-# WhatsApp interactive limits to prevent silent UI drops
-WALIM = {"list_title": 24, "list_desc": 72, "button": 20, "header": 60, "body": 1024, "rows": 10}
+# =========================
+# Downstream integrations
+# =========================
+
+APPSCRIPT_URL   = os.getenv("APPSCRIPT_URL")            # your deployed web app URL
+OPENROUTER_KEY  = os.getenv("OPENROUTER_KEY")
+OPENROUTER_MODEL= "qwen/qwen3-30b-a3b:free"
+OPENROUTER_API  = "https://openrouter.ai/api/v1/chat/completions"
+
+ADMIN_EMAIL     = os.getenv("ADMIN_EMAIL", "solutions@nexabloom.io")
+DRIVE_FOLDER_ID = os.getenv("DRIVE_FOLDER_ID")
+CALENDLY_URL    = os.getenv("CALENDLY_URL", "")
+CAL_DEFAULT_TZ  = os.getenv("CAL_TZ", "Europe/London")
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(12 * 1024 * 1024)))  # 12MB
+
+SHEET_ID        = os.getenv("SHEET_ID")
+SHEET_TAB       = os.getenv("SHEET_TAB", "Cases")
+
+# WhatsApp interactive safe limits
+WALIM = {
+    "list_title": 24,
+    "list_desc": 72,
+    "button": 20,
+    "header": 60,
+    "body": 1024,
+    "rows": 10,
+}
 
 # SERVICES with full subservices, questions, checklists, next_steps and expanded faqs
 SERVICES = {
